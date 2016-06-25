@@ -1,12 +1,68 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 internal class PowerOfThorEp1
 {
-	private static void Main(string[] args)
+	private class Light
 	{
-		var response = new Dictionary<int, string>
+		public Light(int x, int y)
 		{
+			X = x;
+			Y = y;
+		}
+
+		public int X { get; private set; }
+		public int Y { get; private set; }
+	}
+
+	private class Thor
+	{
+		public Thor(int x, int y)
+		{
+			X = x;
+			Y = y;
+		}
+
+		public int X { get; private set; }
+		public int Y { get; private set; }
+
+		/// <summary>
+		/// Reads the level of Thor's remaining energy, representing the number of moves he can still make.
+		/// </summary>
+		public void ReadEnergy()
+		{
+			int.Parse(Console.ReadLine());
+		}
+
+		public void Move(Light light)
+		{
+			int horizontalDistance = light.X - X;
+			int verticalDistance = light.Y - Y;
+
+			int horizontalStep = Aim(horizontalDistance);
+			int verticalStep = Aim(verticalDistance);
+
+			X += horizontalStep;
+			Y += verticalStep;
+			this.direction = horizontalStep + verticalStep * 10;
+		}
+
+		private int Aim(int distanceToTarget)
+		{
+			return distanceToTarget > 0 ? 1 : distanceToTarget < 0 ? -1 : 0;
+		}
+
+		public void TellDirection()
+		{
+			Console.WriteLine("{0}", ResponseMap[this.direction]);
+		}
+
+		private int direction;
+
+		private static readonly Dictionary<int, string> ResponseMap = new Dictionary<int, string>
+		{
+			{0, string.Empty },
 			{-1, "W"},
 			{1, "E"},
 			{-10, "N"},
@@ -16,26 +72,18 @@ internal class PowerOfThorEp1
 			{11, "SE"},
 			{9, "SW"}
 		};
+	}
 
-		string[] inputs = Console.ReadLine().Split(' ');
-		int LX = int.Parse(inputs[0]); // the X position of the light of power
-		int LY = int.Parse(inputs[1]); // the Y position of the light of power
-		int TX = int.Parse(inputs[2]); // Thor's starting X position
-		int TY = int.Parse(inputs[3]); // Thor's starting Y position
+	private static void Main(string[] args)
+	{
+		int[] inputs = Console.ReadLine().Split(' ').Select(int.Parse).ToArray();
+		var light = new Light(inputs[0], inputs[1]);
+		var thor = new Thor(inputs[2], inputs[3]);
 
-		// game loop
 		while (true)
 		{
-			int E = int.Parse(Console.ReadLine()); // The level of Thor's remaining energy, representing the number of moves he can still make.
-
-			// Write an action using Console.WriteLine() To debug: Console.Error.WriteLine("Debug messages...");
-			int h = LX - TX;
-			int v = LY - TY;
-			int hDiff = h > 0 ? 1 : h < 0 ? -1 : 0;
-			int vDiff = v > 0 ? 1 : v < 0 ? -1 : 0;
-			TX += hDiff;
-			TY += vDiff;
-			Console.WriteLine("{0}", response[hDiff + vDiff * 10]); // A single line providing the move to be made: N NE E SE S SW W or NW
+			thor.Move(light);
+			thor.TellDirection();
 		}
 	}
 }
