@@ -8,21 +8,32 @@ internal class MimeType
 	{
 		var lookupTable = new Dictionary<string, string>();
 
-		int N = int.Parse(Console.ReadLine()); // Number of elements which make up the association table.
-		int Q = int.Parse(Console.ReadLine()); // Number Q of file names to be analyzed.
-		for (int i = 0; i < N; i++)
+		int fileTypesCount = int.Parse(Console.ReadLine());
+		int fileNamesCount = int.Parse(Console.ReadLine());
+
+		LoadMimeTypes(lookupTable, fileTypesCount);
+		AnalyzeFileNames(lookupTable, fileNamesCount);
+	}
+
+	private static void LoadMimeTypes(Dictionary<string, string> lookupTable, int fileTypesCount)
+	{
+		for (int i = 0; i < fileTypesCount; i++)
 		{
 			string[] inputs = Console.ReadLine().Split(' ');
-			string EXT = inputs[0]; // file extension
-			string MT = inputs[1]; // MIME type.
+			string extension = inputs[0];
+			string mimeType = inputs[1];
 
-			lookupTable[EXT.ToLower()] = MT;
+			lookupTable[extension.ToLower()] = mimeType;
 		}
+	}
 
-		for (int i = 0; i < Q; i++)
+	private static void AnalyzeFileNames(Dictionary<string, string> lookupTable, int fileNamesCount)
+	{
+		for (int i = 0; i < fileNamesCount; i++)
 		{
-			string FNAME = Console.ReadLine(); // One file name per line.
-			var ext = Path.GetExtension(FNAME);
+			string fileName = Console.ReadLine();
+			var ext = Path.GetExtension(fileName);
+
 			if (!string.IsNullOrEmpty(ext))
 			{
 				ext = ext.ToLower().Substring(1);
