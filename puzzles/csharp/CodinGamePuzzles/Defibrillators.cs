@@ -2,26 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Text;
 
 internal class Defibrillators
 {
-	private static class Parser
+	private static void Main(string[] args)
 	{
-		static Parser()
-		{
-			NumberFormatInfo provider = new NumberFormatInfo();
-			provider.NumberDecimalSeparator = ",";
+		var userPosition = Position.ReadPosition();
+		var finder = new DefibrillatorFinder();
+		finder.LoadData();
 
-			NumberFormatProvider = provider;
-		}
-
-		public static double ToDouble(string value)
-		{
-			return Convert.ToDouble(value, NumberFormatProvider);
-		}
-
-		private static readonly IFormatProvider NumberFormatProvider;
+		Console.WriteLine(finder.GetClosest(userPosition));
 	}
 
 	private class Position
@@ -30,6 +20,14 @@ internal class Defibrillators
 		{
 			this.lon = lon;
 			this.lat = lat;
+		}
+
+		public static Position ReadPosition()
+		{
+			double lon = GpsCoordinateParser.ToDouble(Console.ReadLine());
+			double lat = GpsCoordinateParser.ToDouble(Console.ReadLine());
+
+			return new Position(lon, lat);
 		}
 
 		public double GetDistance(Position position)
@@ -52,45 +50,78 @@ internal class Defibrillators
 		private const int EarthRadsInKm = 6371;
 	}
 
-	private class UserReader
+	private static class GpsCoordinateParser
 	{
-		public Position GetUserPosition()
+		static GpsCoordinateParser()
 		{
-			double lon = Parser.ToDouble(Console.ReadLine());
-			double lat = Parser.ToDouble(Console.ReadLine());
+			NumberFormatInfo provider = new NumberFormatInfo();
+			provider.NumberDecimalSeparator = ",";
 
-			return new Position(lon, lat);
+			NumberFormatProvider = provider;
 		}
+
+		public static double ToDouble(string value)
+		{
+			return Convert.ToDouble(value, NumberFormatProvider);
+		}
+
+		private static readonly IFormatProvider NumberFormatProvider;
+	}
+
+	private class DefibrillatorFinder
+	{
+		public void LoadData()
+		{
+			int defibrillatorsCount = int.Parse(Console.ReadLine());
+			this.instruments = new List<Defibrillator>(defibrillatorsCount);
+
+			for (int i = 0; i < defibrillatorsCount; i++)
+			{
+				var instrument = Defibrillator.Read();
+				if (ReferenceEquals(null, instrument))
+				{
+					continue;
+				}
+
+				this.instruments.Add(instrument);
+			}
+		}
+
+		public string GetClosest(Position userPosition)
+		{
+			return this.instruments.OrderBy(i => userPosition.GetDistance(i.Position)).First().Name;
+		}
+
+		private IList<Defibrillator> instruments;
 	}
 
 	private class Defibrillator
 	{
-		public int Id { get; set; }
-
-		public string Name { get; set; }
-
-		public string Address { get; set; }
-
-		public string Phone { get; set; }
-
-		public Position Position { get; set; }
-	}
-
-	private class DefibrillatorReader
-	{
-		public IEnumerable<Defibrillator> GetDefibrillators()
+		private Defibrillator(string data)
 		{
-			int records = int.Parse(Console.ReadLine());
-			for (int i = 0; i < records; i++)
-			{
-				yield return GetDefibrillator();
-			}
+			var pieces = data.Split(DATA_SEPARATOR);
+			var position = new Position(GpsCoordinateParser.ToDouble(pieces[4]), GpsCoordinateParser.ToDouble(pieces[5]));
+
+			Id = int.Parse(pieces[0]);
+			Name = pieces[1];
+			Address = pieces[2];
+			Phone = pieces[3];
+			Position = position;
 		}
 
-		private Defibrillator GetDefibrillator()
-		{
-			var data = new List<string>();
+		public int Id { get; private set; }
 
+		public string Name { get; private set; }
+
+		public string Address { get; private set; }
+
+		public string Phone { get; private set; }
+
+		public Position Position { get; private set; }
+
+		public static Defibrillator Read()
+		{
+			var data = string.Empty;
 			while (!IsDataComplete(data))
 			{
 				var piece = Console.ReadLine();
@@ -99,78 +130,18 @@ internal class Defibrillators
 					return null;
 				}
 
-				data.Add(piece);
+				data += piece;
 			}
 
-			var record = data.Aggregate(new StringBuilder(), (sb, p) => sb.Append(p), sb => sb.ToString());
-			var pieces = record.Split(DataSeparator);
-
-			var position = new Position(Parser.ToDouble(pieces[4]), Parser.ToDouble(pieces[5]));
-
-			return new Defibrillator
-			{
-				Id = int.Parse(pieces[0]),
-				Name = pieces[1],
-				Address = pieces[2],
-				Phone = pieces[3],
-				Position = position
-			};
+			return new Defibrillator(data);
 		}
 
-		private static bool IsDataComplete(IEnumerable<string> data)
+		private static bool IsDataComplete(string data)
 		{
-			var separatorCount = data.Aggregate(0, (count, piece) => count + piece.Count(ch => DataSeparator == ch));
-
-			return DataSeparatorCount == separatorCount;
+			return DATA_SEPARATOR_COUNT == data.Count(ch => DATA_SEPARATOR == ch);
 		}
 
-		private const char DataSeparator = ';';
-
-		private const int DataSeparatorCount = 5;
-	}
-
-	private class Finder
-	{
-		public Finder(IEnumerable<Defibrillator> defibrillators)
-		{
-			this.instruments = GetSafe(defibrillators).ToArray();
-		}
-
-		public string GetClosest(Position userPosition)
-		{
-			return this.instruments.OrderBy(i => userPosition.GetDistance(i.Position)).First().Name;
-		}
-
-		private static IEnumerable<Defibrillator> GetSafe(IEnumerable<Defibrillator> defibrillators)
-		{
-			if (ReferenceEquals(null, defibrillators))
-			{
-				yield break;
-			}
-
-			foreach (var instrument in defibrillators)
-			{
-				if (ReferenceEquals(null, instrument))
-				{
-					continue;
-				}
-
-				yield return instrument;
-			}
-		}
-
-		private readonly IEnumerable<Defibrillator> instruments;
-	}
-
-	private static void Main(string[] args)
-	{
-		var userReader = new UserReader();
-		var userPosition = userReader.GetUserPosition();
-
-		var defibrillatorReader = new DefibrillatorReader();
-
-		var finder = new Finder(defibrillatorReader.GetDefibrillators());
-
-		Console.WriteLine(finder.GetClosest(userPosition));
+		private const char DATA_SEPARATOR = ';';
+		private const int DATA_SEPARATOR_COUNT = 5;
 	}
 }
