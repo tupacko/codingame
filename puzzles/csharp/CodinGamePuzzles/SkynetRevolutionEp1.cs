@@ -11,9 +11,12 @@ internal class SkynetRevolutionEp1
 		var network = new Network();
 		network.Read();
 
-		var criticalPathFinder = new ExitRingCriticalPath(network)
+		var criticalPathFinder = new TrapPath(network)
 		{
-			Fallback = new ShortestExitPathCriticalLink(network)
+			Fallback = new ExitRingCriticalPath(network)
+			{
+				Fallback = new ShortestExitPathCriticalLink(network)
+			}
 		};
 
 		while (true)
@@ -21,9 +24,9 @@ internal class SkynetRevolutionEp1
 			uint agentIndex = uint.Parse(Console.ReadLine());
 			var mostCriticalLink = criticalPathFinder.GetMostCriticalLink(agentIndex);
 
-			mostCriticalLink.Item1.DisconnectFrom(mostCriticalLink.Item2);
+			mostCriticalLink.Break();
 
-			Console.WriteLine("{0} {1}", mostCriticalLink.Item1, mostCriticalLink.Item2);
+			Console.WriteLine("{0} {1}", mostCriticalLink.Start, mostCriticalLink.End);
 		}
 	}
 
@@ -77,13 +80,13 @@ internal class SkynetRevolutionEp1
 			}
 		}
 
-		public IEnumerable<Node> FindShortestExitPath(uint startIndex)
+		public IEnumerable<IEnumerable<Node>> FindExitPaths(uint startIndex)
 		{
 			var exitGateways = this.nodes.Values.Where(n => n.IsExit);
 			var startNode = this.nodes[startIndex];
 			var exitPaths = exitGateways.SelectMany(e => e.FindPathsTo(startNode));
 
-			return exitPaths.OrderBy(CalculatePathScore).FirstOrDefault();
+			return exitPaths.OrderBy(CalculatePathScore);
 		}
 
 		private long CalculatePathScore(IEnumerable<Node> path)
@@ -209,17 +212,126 @@ internal class SkynetRevolutionEp1
 		private readonly IList<Node> links;
 	}
 
+	private class Link : IEquatable<Link>
+	{
+		public Link(Node start, Node end)
+		{
+			Start = start;
+			End = end;
+		}
+
+		public Link(Node[] ends)
+		{
+			Start = ends[0];
+			End = ends[1];
+		}
+
+		public Node Start
+		{
+			get; private set;
+		}
+
+		public Node End
+		{
+			get; private set;
+		}
+
+		public void Break()
+		{
+			Start.DisconnectFrom(End);
+		}
+
+		public override bool Equals(object obj)
+		{
+			return Equals(obj as Link);
+		}
+
+		public bool Equals(Link other)
+		{
+			if (ReferenceEquals(null, other))
+			{
+				return false;
+			}
+
+			if (ReferenceEquals(this, other))
+			{
+				return true;
+			}
+
+			return (Equals(Start, other.Start) && Equals(End, other.End))
+				|| (Equals(Start, other.End) && Equals(End, other.Start));
+		}
+	}
+
+	private abstract class LinkBreakerStrategy
+	{
+		protected LinkBreakerStrategy(Network network)
+		{
+			Network = network;
+		}
+
+		protected Network Network
+		{
+			get; private set;
+		}
+
+		public LinkBreakerStrategy Fallback
+		{
+			get; set;
+		}
+
+		public Link GetMostCriticalLink(uint agentIndex)
+		{
+			var fallbackLink = GetFallbackCriticalLink(agentIndex);
+			var criticalLink = GetCriticalLinkInternal(agentIndex, fallbackLink);
+
+			return criticalLink;
+		}
+
+		private Link GetFallbackCriticalLink(uint agentIndex)
+		{
+			if (ReferenceEquals(null, Fallback))
+			{
+				return null;
+			}
+
+			return Fallback.GetMostCriticalLink(agentIndex);
+		}
+
+		protected abstract Link GetCriticalLinkInternal(uint agentIndex, Link fallbackLink);
+	}
+
+	private class TrapPath : LinkBreakerStrategy
+	{
+		public TrapPath(Network network)
+			: base(network) { }
+
+		protected override Link GetCriticalLinkInternal(uint agentIndex, Link fallbackLink)
+		{
+			var criticalPaths = Network.FindExitPaths(agentIndex);
+			var agentFirstSteps = criticalPaths.Select(x => new Link(x.Skip(x.Count() - 2).ToArray()));
+			var somePath = agentFirstSteps.FirstOrDefault();
+
+			if (agentFirstSteps.All(x => somePath.Equals(x)))
+			{
+				return somePath;
+			}
+
+			return fallbackLink;
+		}
+	}
+
 	private class ShortestExitPathCriticalLink : LinkBreakerStrategy
 	{
 		public ShortestExitPathCriticalLink(Network network)
 			: base(network) { }
 
-		protected override Tuple<Node, Node> GetCriticalLinkInternal(uint agentIndex, Tuple<Node, Node> fallbackLink)
+		protected override Link GetCriticalLinkInternal(uint agentIndex, Link fallbackLink)
 		{
-			var criticalPath = Network.FindShortestExitPath(agentIndex);
+			var criticalPath = Network.FindExitPaths(agentIndex).First();
 			var lastNodes = criticalPath.Skip(criticalPath.Count() - 2).ToArray();
 
-			return new Tuple<Node, Node>(lastNodes[0], lastNodes[1]);
+			return new Link(lastNodes[0], lastNodes[1]);
 		}
 	}
 
@@ -228,7 +340,7 @@ internal class SkynetRevolutionEp1
 		public ExitRingCriticalPath(Network network)
 			: base(network) { }
 
-		protected override Tuple<Node, Node> GetCriticalLinkInternal(uint agentIndex, Tuple<Node, Node> fallbackLink)
+		protected override Link GetCriticalLinkInternal(uint agentIndex, Link fallbackLink)
 		{
 			var agent = Network.Single(n => Equals(n.Index, agentIndex));
 			var nonAgentNode = GetNonAgentNode(fallbackLink, agent);
@@ -246,17 +358,17 @@ internal class SkynetRevolutionEp1
 			return criticalRingLink;
 		}
 
-		private Node GetNonAgentNode(Tuple<Node, Node> link, Node agent)
+		private Node GetNonAgentNode(Link link, Node agent)
 		{
-			if (!ReferenceEquals(agent, link.Item1))
+			if (!ReferenceEquals(agent, link.Start))
 			{
-				return link.Item1;
+				return link.Start;
 			}
 
-			return link.Item2;
+			return link.End;
 		}
 
-		private Tuple<Node, Node> GetCriticalRingLink(Node agent)
+		private Link GetCriticalRingLink(Node agent)
 		{
 			var ringsDesc = GetConnectedExitRings(agent).OrderByDescending(x => x.Count());
 			if (!ringsDesc.Any())
@@ -280,7 +392,7 @@ internal class SkynetRevolutionEp1
 			return Network.Where(n => center.IsDirectConnection(n));
 		}
 
-		private Tuple<Node, Node> GetWeakestRingLink(IEnumerable<Node> ring, Node agent)
+		private Link GetWeakestRingLink(IEnumerable<Node> ring, Node agent)
 		{
 			var first = ring.FirstOrDefault(n => !agent.IsDirectConnection(n) && ring.Any(i => !agent.IsDirectConnection(i) && n.IsDirectConnection(i)));
 			if (ReferenceEquals(null, first))
@@ -288,50 +400,7 @@ internal class SkynetRevolutionEp1
 				return null;
 			}
 
-			return new Tuple<Node, Node>(first, ring.First(n => !agent.IsDirectConnection(n) && first.IsDirectConnection(n)));
+			return new Link(first, ring.First(n => !agent.IsDirectConnection(n) && first.IsDirectConnection(n)));
 		}
-	}
-
-	private abstract class LinkBreakerStrategy
-	{
-		protected LinkBreakerStrategy(Network network)
-		{
-			this.network = network;
-		}
-
-		public LinkBreakerStrategy Fallback
-		{
-			get; set;
-		}
-
-		protected Network Network
-		{
-			get
-			{
-				return this.network;
-			}
-		}
-
-		public Tuple<Node, Node> GetMostCriticalLink(uint agentIndex)
-		{
-			var fallbackLink = GetFallbackCriticalLink(agentIndex);
-			var criticalLink = GetCriticalLinkInternal(agentIndex, fallbackLink);
-
-			return criticalLink;
-		}
-
-		protected abstract Tuple<Node, Node> GetCriticalLinkInternal(uint agentIndex, Tuple<Node, Node> fallbackLink);
-
-		private Tuple<Node, Node> GetFallbackCriticalLink(uint agentIndex)
-		{
-			if (ReferenceEquals(null, Fallback))
-			{
-				return null;
-			}
-
-			return Fallback.GetMostCriticalLink(agentIndex);
-		}
-
-		private readonly Network network;
 	}
 }
