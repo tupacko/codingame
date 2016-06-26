@@ -329,7 +329,7 @@ internal class SkynetRevolutionEp1
 		protected override Link GetCriticalLinkInternal(uint agentIndex, Link fallbackLink)
 		{
 			var criticalPath = Network.FindExitPaths(agentIndex).First();
-			var lastNodes = criticalPath.Skip(criticalPath.Count() - 2).ToArray();
+			var lastNodes = criticalPath.Take(2).ToArray();
 
 			return new Link(lastNodes[0], lastNodes[1]);
 		}
