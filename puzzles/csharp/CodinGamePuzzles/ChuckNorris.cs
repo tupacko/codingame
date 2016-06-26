@@ -5,50 +5,20 @@ using System.Text;
 
 internal class ChuckNorris
 {
-	private class EncodedChar
+	private static void Main(string[] args)
 	{
-		public EncodedChar(bool type, int repeat)
-		{
-			this.value = type;
-			this.count = repeat;
-		}
+		string message = Console.ReadLine();
 
-		public override string ToString()
-		{
-			var typeMarker = GetTypeMarker();
-			var countMarker = GetCountMarker();
-
-			return GetStringRepresentation(typeMarker, countMarker);
-		}
-
-		private string GetTypeMarker()
-		{
-			if (value)
-			{
-				return "0";
-			}
-
-			return "00";
-		}
-
-		private string GetCountMarker()
-		{
-			return new String('0', this.count);
-		}
-
-		private static string GetStringRepresentation(string typeMarker, string countMarker)
-		{
-			return string.Format("{0} {1}", typeMarker, countMarker);
-		}
-
-		private readonly bool value;
-
-		private readonly int count;
+		Console.WriteLine(Encode(message));
 	}
 
-	private static char[] GetCharacters(string message)
+	private static string Encode(string message)
 	{
-		return message.ToCharArray();
+		var chars = message.ToCharArray();
+		var binaryChars = GetBinaryCharacters(chars);
+		var encodedChars = GetEncodedCharacters(binaryChars).ToArray();
+
+		return GetEncodedMessage(encodedChars);
 	}
 
 	private static byte[] GetBinaryCharacters(char[] chars)
@@ -103,19 +73,44 @@ internal class ChuckNorris
 		return chars.Aggregate(new StringBuilder(), (sb, c) => sb.AppendFormat(" {0}", c.ToString()), sb => sb.ToString().Substring(1));
 	}
 
-	private static string Encode(string message)
+	private class EncodedChar
 	{
-		var chars = GetCharacters(message);
-		var binaryChars = GetBinaryCharacters(chars);
-		var encodedChars = GetEncodedCharacters(binaryChars).ToArray();
+		public EncodedChar(bool type, int repeat)
+		{
+			this.value = type;
+			this.count = repeat;
+		}
 
-		return GetEncodedMessage(encodedChars);
-	}
+		public override string ToString()
+		{
+			var typeMarker = GetTypeMarker();
+			var countMarker = GetCountMarker();
 
-	private static void Main(string[] args)
-	{
-		string MESSAGE = Console.ReadLine();
+			return GetStringRepresentation(typeMarker, countMarker);
+		}
 
-		Console.WriteLine(Encode(MESSAGE));
+		private string GetTypeMarker()
+		{
+			if (value)
+			{
+				return "0";
+			}
+
+			return "00";
+		}
+
+		private string GetCountMarker()
+		{
+			return new String('0', this.count);
+		}
+
+		private static string GetStringRepresentation(string typeMarker, string countMarker)
+		{
+			return string.Format("{0} {1}", typeMarker, countMarker);
+		}
+
+		private readonly bool value;
+
+		private readonly int count;
 	}
 }
