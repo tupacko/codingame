@@ -1,15 +1,37 @@
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 
 internal class SkynetRevolutionEp1
 {
+	private static void Main(string[] args)
+	{
+		var network = new Network();
+		network.Read();
+
+		var criticalPathFinder = new ExitRingCriticalPath(network)
+		{
+			Fallback = new ShortestExitPathCriticalLink(network)
+		};
+
+		while (true)
+		{
+			uint agentIndex = uint.Parse(Console.ReadLine());
+			var mostCriticalLink = criticalPathFinder.GetMostCriticalLink(agentIndex);
+
+			mostCriticalLink.Item1.DisconnectFrom(mostCriticalLink.Item2);
+
+			Console.WriteLine("{0} {1}", mostCriticalLink.Item1, mostCriticalLink.Item2);
+		}
+	}
+
 	private class Network : IEnumerable, IEnumerable<Node>
 	{
 		public Network()
 		{
-			this.nodes = new List<Node>();
+			this.nodes = new ConcurrentDictionary<uint, Node>();
 		}
 
 		public void Read()
@@ -23,37 +45,6 @@ internal class SkynetRevolutionEp1
 
 			ReadLinks(linksCount);
 			ReadExitGateways(exitGatewaysCount);
-		}
-
-		public IEnumerable<Node> FindShortestExitPath(uint startIndex)
-		{
-			var exitGateways = this.nodes.Where(n => n.IsExit);
-			var startNode = GetNode(startIndex);
-			var exitPaths = exitGateways.SelectMany(e => e.FindPathsTo(startNode));
-
-			return exitPaths.OrderBy(CalculatePathScore).FirstOrDefault();
-		}
-
-		IEnumerator IEnumerable.GetEnumerator()
-		{
-			return this.nodes.GetEnumerator();
-		}
-
-		IEnumerator<Node> IEnumerable<Node>.GetEnumerator()
-		{
-			return this.nodes.GetEnumerator();
-		}
-
-		private long CalculatePathScore(IEnumerable<Node> path)
-		{
-			var count = path.Count();
-			var subScoreNode = path.Skip(count - 2).FirstOrDefault();
-			if (ReferenceEquals(null, subScoreNode))
-			{
-				return count * 100;
-			}
-
-			return count * 100 + subScoreNode.Index;
 		}
 
 		private void ReadLinks(uint linksCount)
@@ -72,122 +63,82 @@ internal class SkynetRevolutionEp1
 			}
 		}
 
+		private Node GetOrCreateNode(uint index)
+		{
+			return this.nodes.GetOrAdd(index, x => new Node(x));
+		}
+
 		private void ReadExitGateways(uint exitGatewaysCount)
 		{
 			for (uint i = 0; i < exitGatewaysCount; i++)
 			{
 				uint exitIndex = uint.Parse(Console.ReadLine());
-
-				GetNode(exitIndex).SetExit();
+				this.nodes[exitIndex].SetExit();
 			}
 		}
 
-		private Node GetNode(uint index)
+		public IEnumerable<Node> FindShortestExitPath(uint startIndex)
 		{
-			return this.nodes.Single(n => n.IsAtIndex(index));
+			var exitGateways = this.nodes.Values.Where(n => n.IsExit);
+			var startNode = this.nodes[startIndex];
+			var exitPaths = exitGateways.SelectMany(e => e.FindPathsTo(startNode));
+
+			return exitPaths.OrderBy(CalculatePathScore).FirstOrDefault();
 		}
 
-		private Node GetOrCreateNode(uint index)
+		private long CalculatePathScore(IEnumerable<Node> path)
 		{
-			var node = this.nodes.SingleOrDefault(n => n.IsAtIndex(index));
-			if (ReferenceEquals(null, node))
+			var count = path.Count();
+			var subScoreNode = path.Skip(count - 2).FirstOrDefault();
+			if (ReferenceEquals(null, subScoreNode))
 			{
-				node = new Node(index);
-
-				this.nodes.Add(node);
+				return count * 100;
 			}
 
-			return node;
+			return count * 100 + subScoreNode.Index;
 		}
 
-		private readonly IList<Node> nodes;
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return this.nodes.Values.GetEnumerator();
+		}
+
+		IEnumerator<Node> IEnumerable<Node>.GetEnumerator()
+		{
+			return this.nodes.Values.GetEnumerator();
+		}
+
+		private readonly ConcurrentDictionary<uint, Node> nodes;
 	}
 
 	private class Node
 	{
 		public Node(uint index)
 		{
-			this.number = index;
+			Index = index;
 
 			this.links = new List<Node>();
 		}
 
 		public bool IsExit
 		{
-			get
-			{
-				return this.isExitNode;
-			}
+			get; private set;
 		}
 
-		internal uint Index
+		public uint Index
 		{
-			get
-			{
-				return this.number;
-			}
-		}
-
-		public bool IsAtIndex(uint index)
-		{
-			return this.number == index;
+			get; private set;
 		}
 
 		public void SetExit()
 		{
-			this.isExitNode = true;
+			IsExit = true;
 		}
 
 		public void ConnectTo(Node other)
 		{
 			other.ConnectToInternal(this);
 			ConnectToInternal(other);
-		}
-
-		public void DisconnectFrom(Node other)
-		{
-			other.DisconnectFromInternal(this);
-			DisconnectFromInternal(other);
-		}
-
-		public bool IsDirectConnection(Node other)
-		{
-			return this.links.Contains(other);
-		}
-
-		public IEnumerable<IEnumerable<Node>> FindPathsTo(Node other)
-		{
-			return FindPathsInternal(this, other, new Node[0]);
-		}
-
-		public override string ToString()
-		{
-			return Convert.ToString(this.number);
-		}
-
-		private IEnumerable<IEnumerable<Node>> FindPathsInternal(Node start, Node end, IEnumerable<Node> skip)
-		{
-			if (ReferenceEquals(start, end))
-			{
-				yield return new[] { end };
-				yield break;
-			}
-
-			var completeSkip = skip.Concat(start.links).ToList();
-
-			foreach (var next in start.links)
-			{
-				if (skip.Contains(next))
-				{
-					continue;
-				}
-
-				var paths = FindPathsInternal(next, end, completeSkip);
-				foreach (var path in paths)
-				{
-					yield return new[] { start }.Concat(path);
-				}
-			}
 		}
 
 		private void ConnectToInternal(Node other)
@@ -200,6 +151,12 @@ internal class SkynetRevolutionEp1
 			this.links.Add(other);
 		}
 
+		public void DisconnectFrom(Node other)
+		{
+			other.DisconnectFromInternal(this);
+			DisconnectFromInternal(other);
+		}
+
 		private void DisconnectFromInternal(Node other)
 		{
 			if (!this.links.Contains(other))
@@ -210,11 +167,46 @@ internal class SkynetRevolutionEp1
 			this.links.Remove(other);
 		}
 
+		public bool IsDirectConnection(Node other)
+		{
+			return this.links.Contains(other);
+		}
+
+		public IEnumerable<IEnumerable<Node>> FindPathsTo(Node other)
+		{
+			return FindPathsInternal(this, other, new Node[0]);
+		}
+
+		private IEnumerable<IEnumerable<Node>> FindPathsInternal(Node start, Node end, IEnumerable<Node> skip)
+		{
+			if (ReferenceEquals(start, end))
+			{
+				yield return new[] { end };
+				yield break;
+			}
+
+			var allSkipped = skip.Concat(start.links).ToList();
+			foreach (var next in start.links)
+			{
+				if (skip.Contains(next))
+				{
+					continue;
+				}
+
+				var subpaths = FindPathsInternal(next, end, allSkipped);
+				foreach (var path in subpaths)
+				{
+					yield return new[] { start }.Concat(path);
+				}
+			}
+		}
+
+		public override string ToString()
+		{
+			return Convert.ToString(Index);
+		}
+
 		private readonly IList<Node> links;
-
-		private readonly uint number;
-
-		private bool isExitNode;
 	}
 
 	private class ShortestExitPathCriticalLink : LinkBreakerStrategy
@@ -238,7 +230,7 @@ internal class SkynetRevolutionEp1
 
 		protected override Tuple<Node, Node> GetCriticalLinkInternal(uint agentIndex, Tuple<Node, Node> fallbackLink)
 		{
-			var agent = Network.Single(n => n.IsAtIndex(agentIndex));
+			var agent = Network.Single(n => Equals(n.Index, agentIndex));
 			var nonAgentNode = GetNonAgentNode(fallbackLink, agent);
 			if (nonAgentNode.IsExit)
 			{
@@ -341,26 +333,5 @@ internal class SkynetRevolutionEp1
 		}
 
 		private readonly Network network;
-	}
-
-	private static void Main(string[] args)
-	{
-		var network = new Network();
-		network.Read();
-
-		var criticalPathFinder = new ExitRingCriticalPath(network)
-		{
-			Fallback = new ShortestExitPathCriticalLink(network)
-		};
-
-		while (true)
-		{
-			uint agentIndex = uint.Parse(Console.ReadLine());
-			var mostCriticalLink = criticalPathFinder.GetMostCriticalLink(agentIndex);
-
-			mostCriticalLink.Item1.DisconnectFrom(mostCriticalLink.Item2);
-
-			Console.WriteLine("{0} {1}", mostCriticalLink.Item1, mostCriticalLink.Item2);
-		}
 	}
 }
