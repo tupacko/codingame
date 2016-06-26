@@ -28,39 +28,33 @@ internal class ChuckNorris
 
 	private static IEnumerable<EncodedChar> GetEncodedCharacters(byte[] chars)
 	{
-		var enumerator = GetBitsFlow(chars).GetEnumerator();
-		if (!enumerator.MoveNext())
+		var bitEnumerator = GetAllBits(chars).GetEnumerator();
+		if (!bitEnumerator.MoveNext())
 		{
 			yield break;
 		}
 
-		bool type = enumerator.Current;
-		int count = 1;
-		while (enumerator.MoveNext())
+		bool bitType = bitEnumerator.Current;
+		int bitCount = 1;
+		while (bitEnumerator.MoveNext())
 		{
-			if (type == enumerator.Current)
+			if (bitType == bitEnumerator.Current)
 			{
-				count++;
+				bitCount++;
 				continue;
 			}
 
-			yield return new EncodedChar(type, count);
-			type = enumerator.Current;
-			count = 1;
+			yield return new EncodedChar(bitType, bitCount);
+			bitType = bitEnumerator.Current;
+			bitCount = 1;
 		}
 
-		yield return new EncodedChar(type, count);
+		yield return new EncodedChar(bitType, bitCount);
 	}
 
-	private static IEnumerable<bool> GetBitsFlow(byte[] chars)
+	private static IEnumerable<bool> GetAllBits(byte[] chars)
 	{
-		for (int i = 0, max = chars.Length; i < max; i++)
-		{
-			foreach (var bit in GetBits(chars[i]))
-			{
-				yield return '1' == bit ? true : false;
-			}
-		}
+		return chars.SelectMany(GetBits).Select(x => Equals('1', x));
 	}
 
 	private static char[] GetBits(byte character)
