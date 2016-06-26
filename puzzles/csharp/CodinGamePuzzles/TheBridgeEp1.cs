@@ -2,86 +2,170 @@ using System;
 
 internal class TheBridgeEp1
 {
-	private abstract class ProcessorBase
+	private static void Main(string[] args)
 	{
-		protected int R
+		var environment = Environment.Load();
+		var processorChain = CreateProcessors(environment);
+		var motorbike = new Bike();
+
+		// game loop
+		while (true)
+		{
+			motorbike.LoadState();
+
+			processorChain.Process(motorbike);
+		}
+	}
+
+	private class Environment
+	{
+		private Environment()
+		{
+		}
+
+		public int RoadLength
 		{
 			get;
 			private set;
 		}
 
-		protected int G
+		public int GapLength
 		{
 			get;
 			private set;
 		}
 
-		protected int L
+		public int PlatformLength
 		{
 			get;
 			private set;
 		}
 
-		public ProcessorBase Next
+		public static Environment Load()
 		{
-			get;
-			set;
-		}
-
-		protected ProcessorBase(int R, int G, int L)
-		{
-			this.R = R;
-			this.G = G;
-			this.L = L;
-		}
-
-		public void Process(int S, int X)
-		{
-			Console.Error.WriteLine("{0}, {1}", S, X);
-
-			if (!CanHandle(S, X))
+			var environment = new Environment
 			{
-				HandleNext(S, X);
+				RoadLength = int.Parse(Console.ReadLine()),
+				GapLength = int.Parse(Console.ReadLine()),
+				PlatformLength = int.Parse(Console.ReadLine())
+			};
+
+			return environment;
+		}
+	}
+
+	private class Bike
+	{
+		public void LoadState()
+		{
+			this.speed = int.Parse(Console.ReadLine());
+			this.position = int.Parse(Console.ReadLine());
+		}
+
+		public bool IsOver(Environment environment)
+		{
+			return environment.RoadLength + environment.GapLength <= this.position;
+		}
+
+		public bool IsFastEnough(Environment environment)
+		{
+			return environment.GapLength >= this.speed;
+		}
+
+		public bool IsTooFast(Environment environment)
+		{
+			return environment.GapLength + 1 < this.speed;
+		}
+
+		public bool ShouldJump(Environment environment)
+		{
+			return this.position + this.speed > environment.RoadLength;
+		}
+
+		private int speed;
+
+		private int position;
+	}
+
+	private static ProcessorBase CreateProcessors(Environment environment)
+	{
+		var speed = new Speed(environment);
+		var slow = new Slow(environment);
+		var jump = new Jump(environment);
+		var wait = new Wait();
+
+		speed.SetNextInChain(jump);
+		jump.SetNextInChain(slow);
+		slow.SetNextInChain(wait);
+
+		return speed;
+	}
+
+	private interface IProcessor
+	{
+		void Process(Bike bike);
+	}
+
+	private abstract class ProcessorBase : IProcessor
+	{
+		protected ProcessorBase(Environment environment)
+		{
+			Environment = environment;
+		}
+
+		protected Environment Environment
+		{
+			get;
+			private set;
+		}
+
+		public void SetNextInChain(IProcessor next)
+		{
+			this.nextProcessor = next;
+		}
+
+		public void Process(Bike bike)
+		{
+			if (!CanHandle(bike))
+			{
+				HandleNext(bike);
 				return;
 			}
 
 			Handle();
 		}
 
-		protected abstract bool CanHandle(int S, int X);
+		protected abstract bool CanHandle(Bike bike);
 
 		protected abstract void Handle();
 
-		protected bool IsOver(int X)
+		private void HandleNext(Bike bike)
 		{
-			return R + G <= X;
-		}
-
-		private void HandleNext(int S, int X)
-		{
-			if (ReferenceEquals(null, Next))
+			if (ReferenceEquals(null, this.nextProcessor))
 			{
 				return;
 			}
 
-			Next.Process(S, X);
+			this.nextProcessor.Process(bike);
 		}
+
+		private IProcessor nextProcessor;
 	}
 
 	private class Speed : ProcessorBase
 	{
-		public Speed(int R, int G, int L) : base(R, G, L)
+		public Speed(Environment environment) : base(environment)
 		{
 		}
 
-		protected override bool CanHandle(int S, int X)
+		protected override bool CanHandle(Bike bike)
 		{
-			if (IsOver(X))
+			if (bike.IsOver(Environment))
 			{
 				return false;
 			}
 
-			if (G >= S)
+			if (bike.IsFastEnough(Environment))
 			{
 				return true;
 			}
@@ -97,18 +181,18 @@ internal class TheBridgeEp1
 
 	private class Slow : ProcessorBase
 	{
-		public Slow(int R, int G, int L) : base(R, G, L)
+		public Slow(Environment environment) : base(environment)
 		{
 		}
 
-		protected override bool CanHandle(int S, int X)
+		protected override bool CanHandle(Bike bike)
 		{
-			if (IsOver(X))
+			if (bike.IsOver(Environment))
 			{
 				return true;
 			}
 
-			if (G + 1 < S)
+			if (bike.IsTooFast(Environment))
 			{
 				return true;
 			}
@@ -124,18 +208,18 @@ internal class TheBridgeEp1
 
 	private class Jump : ProcessorBase
 	{
-		public Jump(int R, int G, int L) : base(R, G, L)
+		public Jump(Environment environment) : base(environment)
 		{
 		}
 
-		protected override bool CanHandle(int S, int X)
+		protected override bool CanHandle(Bike bike)
 		{
-			if (IsOver(X))
+			if (bike.IsOver(Environment))
 			{
 				return false;
 			}
 
-			if (X < R && X + S > R)
+			if (bike.ShouldJump(Environment))
 			{
 				return true;
 			}
@@ -149,54 +233,11 @@ internal class TheBridgeEp1
 		}
 	}
 
-	private class Wait : ProcessorBase
+	private class Wait : IProcessor
 	{
-		public Wait(int R, int G, int L) : base(R, G, L)
-		{
-		}
-
-		protected override bool CanHandle(int S, int X)
-		{
-			return true;
-		}
-
-		protected override void Handle()
+		public void Process(Bike bike)
 		{
 			Console.WriteLine("WAIT");
-		}
-	}
-
-	private static ProcessorBase CreateProcessors(int R, int G, int L)
-	{
-		var speed = new Speed(R, G, L);
-		var slow = new Slow(R, G, L);
-		var jump = new Jump(R, G, L);
-		var wait = new Wait(R, G, L);
-
-		speed.Next = jump;
-		jump.Next = slow;
-		slow.Next = wait;
-
-		return speed;
-	}
-
-	private static void Main(string[] args)
-	{
-		int R = int.Parse(Console.ReadLine()); // the length of the road before the gap.
-		int G = int.Parse(Console.ReadLine()); // the length of the gap.
-		int L = int.Parse(Console.ReadLine()); // the length of the landing platform.
-
-		Console.Error.WriteLine("{0}, {1}, {2}", R, G, L);
-
-		var processorChain = CreateProcessors(R, G, L);
-
-		// game loop
-		while (true)
-		{
-			int S = int.Parse(Console.ReadLine()); // the motorbike's speed.
-			int X = int.Parse(Console.ReadLine()); // the position on the road of the motorbike.
-
-			processorChain.Process(S, X);
 		}
 	}
 }
