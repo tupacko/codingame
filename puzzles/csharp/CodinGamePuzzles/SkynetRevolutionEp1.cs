@@ -86,19 +86,7 @@ internal class SkynetRevolutionEp1
 			var startNode = this.nodes[startIndex];
 			var exitPaths = exitGateways.SelectMany(e => e.FindPathsTo(startNode));
 
-			return exitPaths.OrderBy(CalculatePathScore);
-		}
-
-		private long CalculatePathScore(IEnumerable<Node> path)
-		{
-			var count = path.Count();
-			var subScoreNode = path.Skip(count - 2).FirstOrDefault();
-			if (ReferenceEquals(null, subScoreNode))
-			{
-				return count * 100;
-			}
-
-			return count * 100 + subScoreNode.Index;
+			return exitPaths.OrderBy(x => x.Count());
 		}
 
 		IEnumerator IEnumerable.GetEnumerator()
@@ -131,6 +119,14 @@ internal class SkynetRevolutionEp1
 		public uint Index
 		{
 			get; private set;
+		}
+
+		public int LinksCount
+		{
+			get
+			{
+				return this.links.Count;
+			}
 		}
 
 		public void SetExit()
@@ -209,7 +205,7 @@ internal class SkynetRevolutionEp1
 			return Convert.ToString(Index);
 		}
 
-		private readonly IList<Node> links;
+		private readonly List<Node> links;
 	}
 
 	private class Link : IEquatable<Link>
@@ -343,8 +339,8 @@ internal class SkynetRevolutionEp1
 		protected override Link GetCriticalLinkInternal(uint agentIndex, Link fallbackLink)
 		{
 			var agent = Network.Single(n => Equals(n.Index, agentIndex));
-			var nonAgentNode = GetNonAgentNode(fallbackLink, agent);
-			if (nonAgentNode.IsExit)
+			var nonExistNode = GetNonExitNode(fallbackLink);
+			if (nonExistNode.Index == agent.Index)
 			{
 				return fallbackLink;
 			}
@@ -358,14 +354,14 @@ internal class SkynetRevolutionEp1
 			return criticalRingLink;
 		}
 
-		private Node GetNonAgentNode(Link link, Node agent)
+		private Node GetNonExitNode(Link link)
 		{
-			if (!ReferenceEquals(agent, link.Start))
+			if (link.Start.IsExit)
 			{
-				return link.Start;
+				return link.End;
 			}
 
-			return link.End;
+			return link.Start;
 		}
 
 		private Link GetCriticalRingLink(Node agent)
@@ -394,13 +390,13 @@ internal class SkynetRevolutionEp1
 
 		private Link GetWeakestRingLink(IEnumerable<Node> ring, Node agent)
 		{
-			var first = ring.FirstOrDefault(n => !agent.IsDirectConnection(n) && ring.Any(i => !agent.IsDirectConnection(i) && n.IsDirectConnection(i)));
+			var first = ring.FirstOrDefault(x => 3 == x.LinksCount && ring.Where(y => x.IsDirectConnection(y)).Any(z => 3 < z.LinksCount));
 			if (ReferenceEquals(null, first))
 			{
 				return null;
 			}
 
-			return new Link(first, ring.First(n => !agent.IsDirectConnection(n) && first.IsDirectConnection(n)));
+			return new Link(first, ring.Where(y => first.IsDirectConnection(y)).First(z => 3 < z.LinksCount));
 		}
 	}
 }
