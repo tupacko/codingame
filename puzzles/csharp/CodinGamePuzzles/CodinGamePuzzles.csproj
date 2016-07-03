@@ -43,6 +43,10 @@
     <Compile Include="Temperatures.cs" />
     <Compile Include="TheBridgeEp1.cs" />
     <Compile Include="TheDescent.cs" />
+    <Compile Include="ThereIsNoSpoonEp1.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
