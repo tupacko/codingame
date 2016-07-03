@@ -6,17 +6,52 @@ namespace CodinGamePuzzles
 	{
 		private static void Main(string[] args)
 		{
-			int width = int.Parse(Console.ReadLine()); // the number of cells on the X axis
-			int height = int.Parse(Console.ReadLine()); // the number of cells on the Y axis
-			for (int i = 0; i < height; i++)
+			var map = Map.Load();
+		}
+
+		private class Map
+		{
+			private Map(int width, int height)
 			{
-				string line = Console.ReadLine(); // width characters, each either 0 or .
+				this.width = width;
+				this.height = height;
+
+				this.nodes = new char[this.width][];
 			}
 
-			// Write an action using Console.WriteLine() To debug: Console.Error.WriteLine("Debug messages...");
+			public static Map Load()
+			{
+				int width = int.Parse(Console.ReadLine());
+				int height = int.Parse(Console.ReadLine());
 
-			// Three coordinates: a node, its right neighbor, its bottom neighbor
-			Console.WriteLine("0 0 1 0 0 1");
+				var map = new Map(width, height);
+				map.LoadNodes();
+
+				return map;
+			}
+
+			private void LoadNodes()
+			{
+				for (int i = 0; i < height; i++)
+				{
+					string line = Console.ReadLine();
+					this.nodes[i] = line.ToCharArray();
+				}
+			}
+
+			public void ListNeighbours()
+			{
+				// Three coordinates: a node, its right neighbor, its bottom neighbor
+				Console.WriteLine("0 0 1 0 0 1");
+			}
+
+			private readonly int height;
+			private readonly int width;
+
+			private readonly char[][] nodes;
+
+			private const char Node = '0';
+			private const char Empty = '.';
 		}
 	}
 }
