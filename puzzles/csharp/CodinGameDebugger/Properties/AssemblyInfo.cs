@@ -1,14 +1,13 @@
 ﻿using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 // General Information about an assembly is controlled through the following set of attributes.
 // Change these attribute values to modify the information associated with an assembly.
-[assembly: AssemblyTitle("CodinGamePuzzles")]
+[assembly: AssemblyTitle("CodinGameDebugger")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("CodinGamePuzzles")]
+[assembly: AssemblyProduct("CodinGameDebugger")]
 [assembly: AssemblyCopyright("Copyright © 2016")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -18,7 +17,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("324a7a6b-734e-4069-8a17-9c27550bb82a")]
+[assembly: Guid("c7e1ee9c-8a6c-4c28-90d9-1a8e8d96d974")]
 
 // Version information for an assembly consists of the following four values:
 //
@@ -28,6 +27,3 @@ using System.Runtime.InteropServices;
 // as shown below: [assembly: AssemblyVersion("1.0.*")]
 [assembly: AssemblyVersion("1.0.0.0")]
 [assembly: AssemblyFileVersion("1.0.0.0")]
-
-// Make sure the debugger can access the puzzle solutions.
-[assembly: InternalsVisibleTo("CodinGameDebugger")]

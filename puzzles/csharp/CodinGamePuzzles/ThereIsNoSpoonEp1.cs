@@ -4,7 +4,7 @@ namespace CodinGamePuzzles
 {
 	internal class ThereIsNoSpoonEp1
 	{
-		private static void Main(string[] args)
+		public static void Main(string[] args)
 		{
 			var map = Map.Load();
 			map.ListNeighbours();
@@ -43,11 +43,11 @@ namespace CodinGamePuzzles
 
 			public void ListNeighbours()
 			{
-				for (int i = 0; i < this.width; i++)
+				for (int i = 0; i < this.height; i++)
 				{
-					for (int j = 0; j < this.height; j++)
+					for (int j = 0; j < this.width; j++)
 					{
-						WriteNodeNeighbours(i, j);
+						WriteNodeNeighbours(j, i);
 					}
 				}
 			}
