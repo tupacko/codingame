@@ -39,6 +39,7 @@
     <Compile Include="Defibrillators.cs" />
     <Compile Include="HorseRacingDuals.cs" />
     <Compile Include="MarsLanderEp1.cs" />
+    <Compile Include="MayanCalculation.cs" />
     <Compile Include="MimeType.cs" />
     <Compile Include="Onboarding.cs" />
     <Compile Include="PowerOfThorEp1.cs" />
