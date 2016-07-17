@@ -23,8 +23,28 @@ namespace CodinGamePuzzles
 			secondNumber.Load();
 
 			string operation = Console.ReadLine();
+			var result = Calculate(firstNumber, operation, secondNumber);
+		}
 
-			Console.WriteLine("result");
+		private static Number Calculate(Number firstNumber, string operation, Number secondNumber)
+		{
+			switch (operation)
+			{
+				case "+":
+					return firstNumber + secondNumber;
+
+				case "-":
+					return firstNumber - secondNumber;
+
+				case "*":
+					return firstNumber * secondNumber;
+
+				case "/":
+					return firstNumber / secondNumber;
+
+				default:
+					throw new Exception("Invalid operation");
+			}
 		}
 
 		private class NumeralSet
@@ -122,6 +142,31 @@ namespace CodinGamePuzzles
 			{
 				this.numeralsNumber = numeralsCount;
 				this.numeralsSet = numerals;
+			}
+
+			private Number(int value)
+			{
+				this.value = value;
+			}
+
+			public static Number operator +(Number first, Number second)
+			{
+				return new Number(first.value + second.value);
+			}
+
+			public static Number operator -(Number first, Number second)
+			{
+				return new Number(first.value - second.value);
+			}
+
+			public static Number operator *(Number first, Number second)
+			{
+				return new Number(first.value * second.value);
+			}
+
+			public static Number operator /(Number first, Number second)
+			{
+				return new Number(first.value / second.value);
 			}
 
 			public void Load()
