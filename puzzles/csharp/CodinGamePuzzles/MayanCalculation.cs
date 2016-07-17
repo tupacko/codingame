@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace CodinGamePuzzles
@@ -22,6 +23,7 @@ namespace CodinGamePuzzles
 
 			string operation = Console.ReadLine();
 			var result = Calculate(firstNumber, operation, secondNumber);
+			result.WriteMayan(numerals);
 		}
 
 		private static Number Calculate(Number firstNumber, string operation, Number secondNumber)
@@ -68,6 +70,11 @@ namespace CodinGamePuzzles
 				return FindNumeral(numeralData);
 			}
 
+			public void Write(int numeralValue)
+			{
+				this.numerals[numeralValue].Write();
+			}
+
 			private string[] ReadRawData()
 			{
 				var rawData = new string[this.height];
@@ -87,7 +94,7 @@ namespace CodinGamePuzzles
 				}
 			}
 
-			public string[] DequeueNextNumberData(string[] rawData)
+			private string[] DequeueNextNumberData(string[] rawData)
 			{
 				var data = new string[this.height];
 				for (int i = 0; i < this.height; i++)
@@ -130,13 +137,21 @@ namespace CodinGamePuzzles
 				return this.data.SequenceEqual(numeralData);
 			}
 
+			public void Write()
+			{
+				foreach (var line in data)
+				{
+					Console.WriteLine(line);
+				}
+			}
+
 			private readonly int value;
 			private readonly string[] data;
 		}
 
 		private class Number
 		{
-			private Number(int value)
+			private Number(long value)
 			{
 				this.value = value;
 			}
@@ -179,6 +194,25 @@ namespace CodinGamePuzzles
 				return new Number(localValue);
 			}
 
+			public void WriteMayan(NumeralSet numerals)
+			{
+				var numeralValues = new Stack<long>();
+				var localValue = this.value;
+
+				do
+				{
+					var numeralValue = localValue % BASE;
+					numeralValues.Push(numeralValue);
+
+					localValue = localValue / BASE;
+				} while (0 < localValue);
+
+				foreach (var numeralValue in numeralValues)
+				{
+					numerals.Write((int)numeralValue);
+				}
+			}
+
 			private static int GetNextNumeralValue(NumeralSet numerals)
 			{
 				var numeral = numerals.LoadNumeral();
@@ -188,7 +222,7 @@ namespace CodinGamePuzzles
 
 			private const int BASE = 20;
 
-			private int value;
+			private long value;
 		}
 	}
 }
