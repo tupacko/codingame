@@ -134,6 +134,7 @@ namespace CodinGamePuzzles
 					var numeralValue = GetNextNumeralValue();
 
 					localValue += numeralValue * (int)Math.Pow(BASE, powerOfBase);
+					powerOfBase--;
 				}
 
 				Console.Error.WriteLine(localValue);
