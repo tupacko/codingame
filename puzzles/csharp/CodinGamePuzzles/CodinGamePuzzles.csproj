@@ -42,6 +42,7 @@
     <Compile Include="MayanCalculation.cs" />
     <Compile Include="MimeType.cs" />
     <Compile Include="Onboarding.cs" />
+    <Compile Include="PowerOfThorEp2.cs" />
     <Compile Include="PowerOfThorEp1.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SkynetRevolutionEp1.cs" />
