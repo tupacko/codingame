@@ -15,12 +15,10 @@ namespace CodinGamePuzzles
 			numerals.Load();
 
 			int numberOfLines = int.Parse(Console.ReadLine());
-			var firstNumber = new Number(numberOfLines / numeralHeight, numerals);
-			firstNumber.Load();
+			var firstNumber = Number.Load(numberOfLines / numeralHeight, numerals);
 
 			numberOfLines = int.Parse(Console.ReadLine());
-			var secondNumber = new Number(numberOfLines / numeralHeight, numerals);
-			secondNumber.Load();
+			var secondNumber = Number.Load(numberOfLines / numeralHeight, numerals);
 
 			string operation = Console.ReadLine();
 			var result = Calculate(firstNumber, operation, secondNumber);
@@ -138,12 +136,6 @@ namespace CodinGamePuzzles
 
 		private class Number
 		{
-			public Number(int numeralsCount, NumeralSet numerals)
-			{
-				this.numeralsNumber = numeralsCount;
-				this.numeralsSet = numerals;
-			}
-
 			private Number(int value)
 			{
 				this.value = value;
@@ -169,14 +161,14 @@ namespace CodinGamePuzzles
 				return new Number(first.value / second.value);
 			}
 
-			public void Load()
+			public static Number Load(int numeralsCount, NumeralSet numerals)
 			{
-				int powerOfBase = this.numeralsNumber - 1;
+				int powerOfBase = numeralsCount - 1;
 				int localValue = 0;
 
-				for (int i = 0; i < this.numeralsNumber; i++)
+				for (int i = 0; i < numeralsCount; i++)
 				{
-					var numeralValue = GetNextNumeralValue();
+					var numeralValue = GetNextNumeralValue(numerals);
 
 					localValue += numeralValue * (int)Math.Pow(BASE, powerOfBase);
 					powerOfBase--;
@@ -184,20 +176,17 @@ namespace CodinGamePuzzles
 
 				Console.Error.WriteLine(localValue);
 
-				this.value = localValue;
+				return new Number(localValue);
 			}
 
-			private int GetNextNumeralValue()
+			private static int GetNextNumeralValue(NumeralSet numerals)
 			{
-				var numeral = this.numeralsSet.LoadNumeral();
+				var numeral = numerals.LoadNumeral();
 
 				return (int)numeral;
 			}
 
 			private const int BASE = 20;
-
-			private readonly int numeralsNumber;
-			private readonly NumeralSet numeralsSet;
 
 			private int value;
 		}
